@@ -2,7 +2,7 @@ import psycopg2
 import os
 
 # Paste your Neon Database URL here
-DATABASE_URL = "postgresql://user:password@ep-rest-of-host.region.aws.neon.tech/dbname?sslmode=require"
+DATABASE_URL = "postgresql://neondb_owner:npg_YMB2gVod4KJG@ep-aged-feather-a1jc90yb-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 movies_data = [
     (0, "Inception", "Sci-Fi", 8.8),
