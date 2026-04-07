@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CineGraph — Movie Recommendation Network</title>
+<style>
+  /* ── Reset & Base ─────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0b0d14;
+    --surface:   #131620;
+    --surface2:  #1a1e2e;
+    --surface3:  #232840;
+    --border:    rgba(255,255,255,0.07);
+    --border2:   rgba(255,255,255,0.13);
+    --text:      #e8eaf2;
+    --muted:     #7b82a0;
+    --accent:    #5b8af5;
+    --accent2:   #9b6dff;
+    --gold:      #f5c842;
+    --green:     #3dd68c;
+    --red:       #f5614a;
+    --radius:    12px;
+    --radius-sm: 7px;
+    --font:      'Outfit', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Typography ──────────────────────────────────── */
+  h1, h2, h3 { font-weight: 600; letter-spacing: -0.02em; }
+  .mono { font-family: 'Fira Code', 'Courier New', monospace; font-size: 0.85em; }
+
+  /* ── Layout ──────────────────────────────────────── */
+  .app-shell {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+
+  /* ── Header ──────────────────────────────────────── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.8rem 0 1.4rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 18px; height: 18px; }
+  .logo-text { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.03em; }
+  .logo-text span { color: var(--accent); }
+  .badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: rgba(91,138,245,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(91,138,245,0.3);
+    padding: 3px 9px;
+    border-radius: 20px;
+  }
+
+  /* ── Grid Layout ─────────────────────────────────── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  /* ── Card ─────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .card-header h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .dot.green  { background: var(--green); }
+  .dot.gold   { background: var(--gold); }
+  .dot.purple { background: var(--accent2); }
+  .card-body { padding: 1.25rem; }
+
+  /* ── Controls ─────────────────────────────────────── */
+  label.field-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  select, input[type=range] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 0.9rem;
+    padding: 0.6rem 0.9rem;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border-color .2s;
+  }
+  select:focus { border-color: var(--accent); }
+  select option { background: var(--surface); }
+
+  /* custom select arrow */
+  .select-wrap { position: relative; }
+  .select-wrap::after {
+    content: '';
+    position: absolute;
+    right: 12px; top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--muted);
+    pointer-events: none;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1.25rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .15s, filter .15s, background .2s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+  }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border2);
+  }
+  .btn-secondary:hover { color: var(--text); border-color: var(--border2); background: var(--surface3); }
+
+  .field { margin-bottom: 1.1rem; }
+
+  /* ── Movie Card Preview ───────────────────────────── */
+  .movie-preview {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.9rem 1rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  .movie-preview.visible { display: block; }
+  .movie-preview .title { font-weight: 600; font-size: 1rem; margin-bottom: 0.3rem; }
+  .movie-preview .meta {
+    display: flex; gap: 0.6rem; align-items: center;
+    font-size: 0.8rem; color: var(--muted);
+  }
+  .genre-pill {
+    background: rgba(91,138,245,0.15);
+    color: var(--accent);
+    border-radius: 20px;
+    padding: 1px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .rating-star {
+    color: var(--gold);
+    font-size: 0.8rem;
+  }
+
+  /* ── Stats Row ────────────────────────────────────── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.8rem;
+    text-align: center;
+  }
+  .stat-num {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 0.2rem;
+  }
+  .stat-num.gold   { color: var(--gold); }
+  .stat-num.green  { color: var(--green); }
+  .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* ── Canvas Area ──────────────────────────────────── */
+  .canvas-wrap {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  #graphCanvas {
+    display: block;
+    width: 100%;
+  }
+  .canvas-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .canvas-empty svg { opacity: 0.3; }
+  .canvas-empty p { font-size: 0.9rem; }
+
+  /* ── Right Panel ──────────────────────────────────── */
+  .right-panel { display: grid; gap: 1.5rem; }
+
+  /* ── Recs List ────────────────────────────────────── */
+  .rec-list { list-style: none; }
+  .rec-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .rec-item:last-child { border-bottom: none; }
+  .rec-rank {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--surface3);
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .rec-rank.top { background: rgba(91,138,245,0.2); color: var(--accent); }
+  .rec-info { flex: 1; min-width: 0; }
+  .rec-title { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rec-meta { font-size: 0.75rem; color: var(--muted); }
+  .rec-weight {
+    font-size: 0.75rem;
+    font-family: 'Fira Code', monospace;
+    color: var(--green);
+    background: rgba(61,214,140,0.1);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* ── Kruskal Steps ────────────────────────────────── */
+  .steps-list { list-style: none; max-height: 260px; overflow-y: auto; }
+  .steps-list::-webkit-scrollbar { width: 4px; }
+  .steps-list::-webkit-scrollbar-track { background: transparent; }
+  .steps-list::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+  .step-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.82rem;
+    align-items: flex-start;
+  }
+  .step-item:last-child { border-bottom: none; }
+  .step-num {
+    min-width: 20px;
+    color: var(--muted);
+    font-family: 'Fira Code', monospace;
+    font-size: 0.78rem;
+    padding-top: 1px;
+  }
+  .step-text { flex: 1; color: var(--muted); }
+  .step-text strong { color: var(--text); font-weight: 600; }
+  .step-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .step-badge.added    { background: rgba(61,214,140,0.15); color: var(--green); }
+  .step-badge.skipped  { background: rgba(245,97,74,0.12); color: var(--red); }
+  .step-badge.start    { background: rgba(91,138,245,0.15); color: var(--accent); }
+
+  /* ── Edge Table ───────────────────────────────────── */
+  .edge-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  .edge-table th {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .edge-table td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .edge-table tr:last-child td { border-bottom: none; }
+  .edge-table tr.mst-row td { color: var(--green); }
+  .edge-table tr.mst-row td:first-child { position: relative; }
+  .edge-table tr.mst-row td:first-child::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 20%; bottom: 20%;
+    width: 2px;
+    background: var(--green);
+    border-radius: 1px;
+  }
+  .tbl-wrap { max-height: 220px; overflow-y: auto; }
+  .tbl-wrap::-webkit-scrollbar { width: 4px; }
+  .tbl-wrap::-webkit-scrollbar-track { background: transparent; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+  /* ── Legend ───────────────────────────────────────── */
+  .legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    color: var(--muted);
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .legend-line {
+    width: 24px; height: 2px; border-radius: 1px;
+  }
+
+  /* ── Empty / Loading states ──────────────────────── */
+  .placeholder-msg {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--muted);
+    font-size: 0.875rem;
+  }
+  .placeholder-msg svg { display: block; margin: 0 auto 0.75rem; opacity: 0.3; }
+
+  /* ── Tooltip ─────────────────────────────────────── */
+  #tooltip {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    pointer-events: none;
+    z-index: 100;
+    display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    max-width: 180px;
+  }
+  #tooltip .tt-title { font-weight: 600; margin-bottom: 2px; }
+  #tooltip .tt-meta { color: var(--muted); font-size: 0.75rem; }
+
+  /* ── Animations ──────────────────────────────────── */
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
+  .fade-in { animation: fadeIn .35s ease forwards; }
+
+  /* ── Responsive ───────────────────────────────────── */
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+</style>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ── Header ── -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+          <circle cx="6"  cy="6"  r="2"/>
+          <circle cx="18" cy="6"  r="2"/>
+          <circle cx="12" cy="18" r="2"/>
+          <line x1="6" y1="6" x2="18" y2="6"/>
+          <line x1="6" y1="6" x2="12" y2="18"/>
+          <line x1="18" y1="6" x2="12" y2="18"/>
+        </svg>
+      </div>
+      <span class="logo-text">Cine<span>Graph</span></span>
+    </div>
+    <span class="badge">Kruskal's MST</span>
+  </header>
+
+  <!-- ── Main Grid ── -->
+  <div class="main-grid">
+
+    <!-- ────────────────── LEFT PANEL ────────────────── -->
+    <aside>
+      <div class="card" style="margin-bottom:1.25rem;">
+        <div class="card-header">
+          <div class="dot"></div>
+          <h3>Select Movie</h3>
+        </div>
+        <div class="card-body">
+          <div class="field">
+            <label class="field-label" for="movieSelect">Movie</label>
+            <div class="select-wrap">
+              <select id="movieSelect">
+                <option value="">— Choose a movie —</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Movie preview card -->
+          <div class="movie-preview" id="moviePreview">
+            <div class="title" id="previewTitle">—</div>
+            <div class="meta">
+              <span class="genre-pill" id="previewGenre">—</span>
+              <span class="rating-star">★</span>
+              <span id="previewRating">—</span>
+              <span>/ 10</span>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" id="runBtn" onclick="runKruskal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            Generate Recommendation Network
+          </button>
+          <button class="btn btn-secondary" style="margin-top:0.6rem;" onclick="resetAll()">Reset</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div id="statsSection" style="display:none;" class="fade-in">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-num" id="statNodes">—</div>
+            <div class="stat-label">Nodes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num gold" id="statEdges">—</div>
+            <div class="stat-label">MST Edges</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num green" id="statWeight">—</div>
+            <div class="stat-label">Total Weight</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kruskal Steps -->
+      <div class="card" id="stepsCard" style="display:none;">
+        <div class="card-header">
+          <div class="dot purple"></div>
+          <h3>Kruskal Steps</h3>
+        </div>
+        <div class="card-body" style="padding:0.5rem 0;">
+          <ul class="steps-list" id="stepsList"></ul>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ────────────────── RIGHT PANEL ────────────────── -->
+    <div class="right-panel">
+
+      <!-- Graph Canvas -->
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="graphCanvas" height="440"></canvas>
+        <div class="canvas-empty" id="canvasEmpty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="6"  cy="6"  r="3"/>
+            <circle cx="18" cy="6"  r="3"/>
+            <circle cx="12" cy="18" r="3"/>
+            <line x1="6" y1="6" x2="18" y2="6"/>
+            <line x1="6" y1="6" x2="12" y2="18"/>
+            <line x1="18" y1="6" x2="12" y2="18"/>
+          </svg>
+          <p>Select a movie and click Generate</p>
+        </div>
+        <div class="legend" id="legendBar" style="display:none;">
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#5b8af5;"></div>
+            <span>Regular node</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#f5c842;"></div>
+            <span>Selected movie</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line" style="background:#3dd68c;"></div>
+            <span>MST edge</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line" style="background:rgba(255,255,255,0.1);"></div>
+            <span>Other edges</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommendations + Edge Table -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem;">
+
+        <!-- Recommendations -->
+        <div class="card" id="recsCard">
+          <div class="card-header">
+            <div class="dot green"></div>
+            <h3>Recommendations</h3>
+          </div>
+          <div class="card-body" style="padding:0.5rem 1rem;" id="recsBody">
+            <div class="placeholder-msg">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              <p>No recommendations yet</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edge List -->
+        <div class="card" id="edgeCard">
+          <div class="card-header">
+            <div class="dot gold"></div>
+            <h3>MST Edge List</h3>
+          </div>
+          <div class="card-body" style="padding:0;" id="edgeBody">
+            <div class="placeholder-msg">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="8" y1="6" x2="21" y2="6"/>
+                <line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="3.01" y2="6"/>
+                <line x1="3" y1="12" x2="3.01" y2="12"/>
+                <line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+              <p>Run the algorithm first</p>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /inner grid -->
+    </div><!-- /right panel -->
+  </div><!-- /main-grid -->
+</div><!-- /app-shell -->
+
+<!-- Tooltip -->
+<div id="tooltip">
+  <div class="tt-title" id="ttTitle"></div>
+  <div class="tt-meta"  id="ttMeta"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT — DATA + ALGORITHM + RENDERING
+══════════════════════════════════════════════════════ -->
+<script>
+/* ──────────────────────────────────────────────────────
+   1. DATASET  (hardcoded, 14 movies)
+   Fields: id, title, genre, rating
+──────────────────────────────────────────────────────── */
+const MOVIES = [
+  { id:0,  title:"Inception",              genre:"Sci-Fi",  rating:8.8 },
+  { id:1,  title:"Interstellar",           genre:"Sci-Fi",  rating:8.6 },
+  { id:2,  title:"The Dark Knight",        genre:"Action",  rating:9.0 },
+  { id:3,  title:"The Matrix",             genre:"Sci-Fi",  rating:8.7 },
+  { id:4,  title:"Avengers: Endgame",      genre:"Action",  rating:8.4 },
+  { id:5,  title:"The Shawshank Redemption",genre:"Drama",  rating:9.3 },
+  { id:6,  title:"Forrest Gump",           genre:"Drama",   rating:8.8 },
+  { id:7,  title:"Parasite",               genre:"Thriller",rating:8.5 },
+  { id:8,  title:"Joker",                  genre:"Thriller",rating:8.4 },
+  { id:9,  title:"Get Out",               genre:"Horror",  rating:7.7 },
+  { id:10, title:"A Quiet Place",          genre:"Horror",  rating:7.5 },
+  { id:11, title:"Toy Story",              genre:"Animation",rating:8.3},
+  { id:12, title:"Spirited Away",          genre:"Animation",rating:8.6},
+  { id:13, title:"The Grand Budapest Hotel",genre:"Comedy", rating:8.1},
+];
+
+/* ──────────────────────────────────────────────────────
+   2. SIMILARITY / EDGE WEIGHT
+   weight = |ratingA - ratingB| + (genre mismatch ? 2 : 0)
+──────────────────────────────────────────────────────── */
+function calcWeight(a, b) {
+  const ratingDiff  = Math.abs(a.rating - b.rating);
+  const genrePenalty = (a.genre !== b.genre) ? 2 : 0;
+  return parseFloat((ratingDiff + genrePenalty).toFixed(2));
+}
+
+/* Build all edges (undirected, no self-loops) */
+function buildAllEdges() {
+  const edges = [];
+  for (let i = 0; i < MOVIES.length; i++) {
+    for (let j = i + 1; j < MOVIES.length; j++) {
+      edges.push({ u: i, v: j, w: calcWeight(MOVIES[i], MOVIES[j]) });
+    }
+  }
+  return edges;
+}
+
+/* ──────────────────────────────────────────────────────
+   3. UNION-FIND (Disjoint Set Union)
+──────────────────────────────────────────────────────── */
+class UnionFind {
+  constructor(n) {
+    this.parent = Array.from({ length: n }, (_, i) => i);
+    this.rank   = new Array(n).fill(0);
+  }
+  find(x) {
+    if (this.parent[x] !== x)
+      this.parent[x] = this.find(this.parent[x]); // path compression
+    return this.parent[x];
+  }
+  union(x, y) {
+    const px = this.find(x), py = this.find(y);
+    if (px === py) return false; // cycle detected
+    // union by rank
+    if (this.rank[px] < this.rank[py]) this.parent[px] = py;
+    else if (this.rank[px] > this.rank[py]) this.parent[py] = px;
+    else { this.parent[py] = px; this.rank[px]++; }
+    return true;
+  }
+}
+
+/* ──────────────────────────────────────────────────────
+   4. KRUSKAL'S ALGORITHM
+   Returns { mstEdges, steps, totalWeight }
+──────────────────────────────────────────────────────── */
+function kruskal(edges, n) {
+  const sorted = [...edges].sort((a, b) => a.w - b.w);
+  const uf     = new UnionFind(n);
+  const mst    = [];
+  const steps  = [];
+
+  steps.push({ type:'start', text:`Sorted ${sorted.length} edges by weight. Starting Kruskal's algorithm on ${n} nodes.` });
+
+  for (const edge of sorted) {
+    const { u, v, w } = edge;
+    const uName = MOVIES[u].title;
+    const vName = MOVIES[v].title;
+
+    if (uf.union(u, v)) {
+      mst.push(edge);
+      steps.push({ type:'added',   text:`Added edge <strong>${uName}</strong> — <strong>${vName}</strong> (w=${w})` });
+      if (mst.length === n - 1) { // MST complete
+        steps.push({ type:'start', text:`MST complete! Selected ${mst.length} edges.` });
+        break;
+      }
+    } else {
+      steps.push({ type:'skipped', text:`Skipped <strong>${uName}</strong> — <strong>${vName}</strong> (w=${w}) — would form cycle` });
+    }
+  }
+
+  const totalWeight = parseFloat(mst.reduce((s, e) => s + e.w, 0).toFixed(2));
+  return { mstEdges: mst, steps, totalWeight };
+}
+
+/* ──────────────────────────────────────────────────────
+   5. GRAPH LAYOUT — deterministic circular + physics nudge
+──────────────────────────────────────────────────────── */
+function computeLayout(canvas) {
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const r  = Math.min(W, H) * 0.38;
+  const n  = MOVIES.length;
+  return MOVIES.map((m, i) => {
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    return {
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle),
+    };
+  });
+}
+
+/* ──────────────────────────────────────────────────────
+   6. CANVAS RENDERING
+──────────────────────────────────────────────────────── */
+let positions  = [];
+let lastResult = null;
+let selectedId = -1;
+let animFrame  = 0;
+let animEdges  = [];
+let animDone   = false;
+const NODE_R   = 22;
+
+function drawGraph(canvas, mstEdges, allEdges, highlight) {
+  const ctx  = canvas.getContext('2d');
+  const dpr  = window.devicePixelRatio || 1;
+  const W    = canvas.width, H = canvas.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const mstSet = new Set(mstEdges.map(e => `${e.u}-${e.v}`));
+
+  /* Draw all non-MST edges (faint) */
+  for (const e of allEdges) {
+    const key = `${e.u}-${e.v}`;
+    if (mstSet.has(key)) continue;
+    const p1 = positions[e.u], p2 = positions[e.v];
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+  }
+
+  /* Draw MST edges (animated) */
+  const edgesToDraw = animDone ? mstEdges : animEdges;
+  for (const e of edgesToDraw) {
+    const p1 = positions[e.u], p2 = positions[e.v];
+    const isAdjacent = (e.u === highlight || e.v === highlight);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = isAdjacent ? '#3dd68c' : 'rgba(61,214,140,0.4)';
+    ctx.lineWidth   = isAdjacent ? 2.5 : 1.5;
+    ctx.shadowColor = isAdjacent ? '#3dd68c' : 'transparent';
+    ctx.shadowBlur  = isAdjacent ? 8 : 0;
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
+
+    /* Edge weight label */
+    const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font      = '9px "Fira Code", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(e.w.toFixed(1), mx, my - 4);
+  }
+
+  /* Draw nodes */
+  for (let i = 0; i < MOVIES.length; i++) {
+    const p    = positions[i];
+    const m    = MOVIES[i];
+    const isSel = i === highlight;
+    const isAdj = !animDone ? false :
+      edgesToDraw.some(e => (e.u === highlight && e.v === i) || (e.v === highlight && e.u === i));
+
+    /* Shadow / glow */
+    if (isSel) {
+      ctx.shadowColor = '#f5c842'; ctx.shadowBlur = 18;
+    } else if (isAdj) {
+      ctx.shadowColor = '#3dd68c'; ctx.shadowBlur = 10;
+    }
+
+    /* Node circle */
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, NODE_R, 0, Math.PI * 2);
+    if (isSel) {
+      ctx.fillStyle = '#f5c842';
+    } else if (isAdj) {
+      ctx.fillStyle = '#1a3a2a';
+    } else {
+      ctx.fillStyle = '#1a2240';
+    }
+    ctx.fill();
+    ctx.strokeStyle = isSel ? '#f5c842' : (isAdj ? '#3dd68c' : 'rgba(91,138,245,0.5)');
+    ctx.lineWidth   = isSel ? 2.5 : 1.5;
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
+
+    /* Node label */
+    const words = m.title.split(' ');
+    let line1 = words[0], line2 = words.slice(1).join(' ');
+    if (line2.length > 9) line2 = line2.slice(0, 8) + '…';
+    ctx.fillStyle = isSel ? '#0b0d14' : (isAdj ? '#3dd68c' : '#c8d0f0');
+    ctx.font      = `600 8px Outfit, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (line2) {
+      ctx.fillText(line1, p.x, p.y - 4.5);
+      ctx.fillText(line2, p.x, p.y + 5.5);
+    } else {
+      ctx.fillText(line1, p.x, p.y);
+    }
+  }
+}
+
+/* Animate MST edge reveal */
+function animateMST(canvas, mstEdges, allEdges, highlight) {
+  animEdges = [];
+  animDone  = false;
+  let idx   = 0;
+
+  function step() {
+    if (idx <= mstEdges.length) {
+      animEdges = mstEdges.slice(0, idx);
+      drawGraph(canvas, mstEdges, allEdges, highlight);
+      idx++;
+      setTimeout(step, 80);
+    } else {
+      animDone = true;
+      drawGraph(canvas, mstEdges, allEdges, highlight);
+    }
+  }
+  step();
+}
+
+/* ──────────────────────────────────────────────────────
+   7. UI HELPERS
+──────────────────────────────────────────────────────── */
+function populateDropdown() {
+  const sel = document.getElementById('movieSelect');
+  MOVIES.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = `${m.title} (${m.genre}, ★${m.rating})`;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', onMovieChange);
+}
+
+function onMovieChange() {
+  const sel = document.getElementById('movieSelect');
+  const id  = parseInt(sel.value);
+  if (isNaN(id)) {
+    document.getElementById('moviePreview').classList.remove('visible');
+    return;
+  }
+  const m = MOVIES[id];
+  document.getElementById('previewTitle').textContent  = m.title;
+  document.getElementById('previewGenre').textContent  = m.genre;
+  document.getElementById('previewRating').textContent = m.rating;
+  document.getElementById('moviePreview').classList.add('visible');
+}
+
+function renderSteps(steps) {
+  const ul = document.getElementById('stepsList');
+  ul.innerHTML = '';
+  steps.forEach((s, i) => {
+    const li = document.createElement('li');
+    li.className = 'step-item';
+    li.innerHTML = `
+      <span class="step-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="step-text">${s.text}</span>
+      <span class="step-badge ${s.type}">${s.type}</span>
+    `;
+    ul.appendChild(li);
+  });
+  document.getElementById('stepsCard').style.display = 'block';
+}
+
+function renderRecs(mstEdges, selectedId) {
+  /* Find all neighbors of selectedId in MST */
+  const adj = mstEdges
+    .filter(e => e.u === selectedId || e.v === selectedId)
+    .map(e => ({
+      movie: MOVIES[e.u === selectedId ? e.v : e.u],
+      weight: e.w
+    }))
+    .sort((a, b) => a.weight - b.weight);
+
+  const body = document.getElementById('recsBody');
+  if (adj.length === 0) {
+    body.innerHTML = '<div class="placeholder-msg"><p>No direct connections found</p></div>';
+    return;
+  }
+
+  let html = '<ul class="rec-list">';
+  adj.forEach((item, idx) => {
+    html += `
+      <li class="rec-item">
+        <div class="rec-rank ${idx === 0 ? 'top' : ''}">${idx+1}</div>
+        <div class="rec-info">
+          <div class="rec-title">${item.movie.title}</div>
+          <div class="rec-meta">${item.movie.genre} · ★${item.movie.rating}</div>
+        </div>
+        <span class="rec-weight">w=${item.weight}</span>
+      </li>`;
+  });
+  html += '</ul>';
+  body.innerHTML = html;
+}
+
+function renderEdgeTable(mstEdges, allEdges) {
+  const mstSet = new Set(mstEdges.map(e => `${e.u}-${e.v}`));
+  const body   = document.getElementById('edgeBody');
+
+  let html = `
+    <div class="tbl-wrap">
+    <table class="edge-table">
+      <thead>
+        <tr>
+          <th>From</th><th>To</th><th>Weight</th><th>In MST?</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  /* Show MST edges first, then others */
+  const sorted = [...allEdges].sort((a,b) => {
+    const aM = mstSet.has(`${a.u}-${a.v}`) ? 0 : 1;
+    const bM = mstSet.has(`${b.u}-${b.v}`) ? 0 : 1;
+    return aM - bM || a.w - b.w;
+  });
+
+  sorted.forEach(e => {
+    const inMST = mstSet.has(`${e.u}-${e.v}`);
+    html += `
+      <tr class="${inMST ? 'mst-row' : ''}">
+        <td>${MOVIES[e.u].title}</td>
+        <td>${MOVIES[e.v].title}</td>
+        <td class="mono">${e.w.toFixed(2)}</td>
+        <td>${inMST ? '✓' : '—'}</td>
+      </tr>`;
+  });
+
+  html += '</tbody></table></div>';
+  body.innerHTML = html;
+}
+
+function renderStats(n, mstEdges, totalWeight) {
+  document.getElementById('statNodes').textContent  = n;
+  document.getElementById('statEdges').textContent  = mstEdges.length;
+  document.getElementById('statWeight').textContent = totalWeight.toFixed(2);
+  document.getElementById('statsSection').style.display = 'block';
+}
+
+/* ──────────────────────────────────────────────────────
+   8. MAIN ENTRY POINT
+──────────────────────────────────────────────────────── */
+function runKruskal() {
+  const sel = document.getElementById('movieSelect');
+  const id  = parseInt(sel.value);
+  if (isNaN(id)) { alert('Please select a movie first.'); return; }
+
+  selectedId = id;
+
+  const allEdges     = buildAllEdges();
+  const { mstEdges, steps, totalWeight } = kruskal(allEdges, MOVIES.length);
+  lastResult = { mstEdges, allEdges };
+
+  /* Setup canvas */
+  const canvas  = document.getElementById('graphCanvas');
+  const wrap    = document.getElementById('canvasWrap');
+  canvas.width  = wrap.clientWidth * (window.devicePixelRatio || 1);
+  canvas.height = 440 * (window.devicePixelRatio || 1);
+  canvas.style.height = '440px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+
+  positions = computeLayout({ width: wrap.clientWidth, height: 440 });
+
+  /* Hide empty state */
+  document.getElementById('canvasEmpty').style.display = 'none';
+  document.getElementById('legendBar').style.display   = 'flex';
+
+  /* Animate */
+  animateMST(canvas, mstEdges, allEdges, id);
+
+  /* Render sidebar panels */
+  renderStats(MOVIES.length, mstEdges, totalWeight);
+  renderSteps(steps);
+  renderRecs(mstEdges, id);
+  renderEdgeTable(mstEdges, allEdges);
+}
+
+function resetAll() {
+  selectedId = -1;
+  lastResult = null;
+  animDone   = false;
+  animEdges  = [];
+
+  document.getElementById('movieSelect').value = '';
+  document.getElementById('moviePreview').classList.remove('visible');
+  document.getElementById('statsSection').style.display = 'none';
+  document.getElementById('stepsCard').style.display    = 'none';
+  document.getElementById('canvasEmpty').style.display  = 'flex';
+  document.getElementById('legendBar').style.display    = 'none';
+
+  const canvas = document.getElementById('graphCanvas');
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+
+  document.getElementById('recsBody').innerHTML = `
+    <div class="placeholder-msg">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+      </svg>
+      <p>No recommendations yet</p>
+    </div>`;
+
+  document.getElementById('edgeBody').innerHTML = `
+    <div class="placeholder-msg">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <line x1="8" y1="6" x2="21" y2="6"/>
+        <line x1="8" y1="12" x2="21" y2="12"/>
+        <line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/>
+        <line x1="3" y1="12" x2="3.01" y2="12"/>
+        <line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+      <p>Run the algorithm first</p>
+    </div>`;
+}
+
+/* ──────────────────────────────────────────────────────
+   9. CANVAS TOOLTIP (hover)
+──────────────────────────────────────────────────────── */
+(function setupTooltip() {
+  const canvas = document.getElementById('graphCanvas');
+  const tip    = document.getElementById('tooltip');
+
+  canvas.addEventListener('mousemove', e => {
+    if (!positions.length) return;
+    const rect  = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX / (window.devicePixelRatio||1);
+    const my = (e.clientY - rect.top)  * scaleY / (window.devicePixelRatio||1);
+
+    let hit = -1;
+    for (let i = 0; i < positions.length; i++) {
+      const dx = positions[i].x - mx, dy = positions[i].y - my;
+      if (Math.sqrt(dx*dx + dy*dy) < NODE_R + 4) { hit = i; break; }
+    }
+
+    if (hit >= 0) {
+      const m = MOVIES[hit];
+      document.getElementById('ttTitle').textContent = m.title;
+      document.getElementById('ttMeta').textContent  = `${m.genre} · ★${m.rating}`;
+      tip.style.display = 'block';
+      tip.style.left    = (e.clientX + 14) + 'px';
+      tip.style.top     = (e.clientY - 30) + 'px';
+      canvas.style.cursor = 'pointer';
+    } else {
+      tip.style.display   = 'none';
+      canvas.style.cursor = 'default';
+    }
+  });
+  canvas.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+})();
+
+/* ──────────────────────────────────────────────────────
+   10. INIT
+──────────────────────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', () => {
+  populateDropdown();
+
+  /* Resize handler */
+  window.addEventListener('resize', () => {
+    if (!lastResult) return;
+    runKruskal();
+  });
+});
+</script>
+</body>
+</html>
