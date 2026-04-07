@@ -1,8 +1,7 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 import psycopg2
 import psycopg2.extras
 import os
-
 app = Flask(__name__)
 
 # Neon Database URL
@@ -38,6 +37,15 @@ def calc_weight(movie_a, movie_b):
     return round(rating_diff + genre_penalty, 2)
 
 # --- Routes ---
+@app.route('/')
+def home():
+    # Find the absolute path to the root folder where index.html is sitting
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(current_dir)
+    html_path = os.path.join(project_root, 'index.html')
+    
+    return send_file(html_path)
+
 @app.route('/api/movies', methods=['GET'])
 def get_movies():
     conn = get_db_connection()
